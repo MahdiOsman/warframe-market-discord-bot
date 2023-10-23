@@ -1,5 +1,4 @@
 // Warframe Market API
-
 const axios = require('axios');
 
 // Get all items

@@ -2,75 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const API = require('../wf-market-api.js');
 const fs = require('fs');
 const path = require('path');
-
-/**
- * Check if an item with the given ID exists in the JSON data.
- * @param {Object} jsonData - The JSON data to search in.
- * @param {number} itemIdToCheck - The ID to check for.
- * @returns {boolean} - True if the item with the given ID exists, false otherwise.
- */
-function checkIdExist(jsonData, itemIdToCheck) {
-    const itemExists = jsonData.items.some((item) => item.id === itemIdToCheck);
-    return itemExists;
-}
-
-/**
- * Add a mod to the watch list in the JSON data.
- * @param {number} modId - The ID of the mod to add.
- * @param {string} modName - The name of the mod to add.
- * @param {string} modPrice - The desired price for the mod.
- * @param {Object} jsonData - The JSON data to update.
- * @param {string} listFilePath - The path to the list JSON file.
- */
-function addModToList(modId, modName, modPrice, jsonData, listFilePath) {
-    // If mod does not exist, add it
-    jsonData.items.push({
-        id: modId,
-        item_name: modName,
-        item_price: modPrice,
-    });
-
-    // Write the updated data back to list.json
-    fs.writeFileSync(listFilePath, JSON.stringify(jsonData, null, 2));
-}
-
-/**
- * Get the order with the lowest platinum price from the given JSON data.
- * @param {Object} jsonData - The JSON data containing order information.
- * @returns {number|null} - The lowest platinum price or null if no valid data is found.
- */
-function getLowestPlatinumPrice(jsonData) {
-    if (!jsonData || !jsonData.payload || !jsonData.payload.orders || jsonData.payload.orders.length === 0) {
-        return null; // Return null if the JSON data is invalid or empty
-    }
-
-    // Initialize the lowestPlatinumPrice with the platinum value of the first order
-    let lowestPlatinumPrice = jsonData.payload.orders[0].platinum;
-
-    // Loop through the orders to find the lowest platinum price
-    for (const order of jsonData.payload.orders) {
-        if (order.platinum < lowestPlatinumPrice) {
-            lowestPlatinumPrice = order.platinum;
-        }
-    }
-
-    return lowestPlatinumPrice;
-}
-
-// To String
-function toString(string) {
-    return `${string}`
-}
-
-// Replace space with underscore
-function replaceSpaceWithUnderscore(string) {
-    return string.replace(/ /g, '_');
-}
-
-// Replace first letter of every word with uppercase
-function makeFirstLettersUpper(string) {
-    return string.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
-}
+// Import utils.js
+const utils = require('../utils.js');
 
 // Slash Command
 module.exports = {
@@ -86,29 +19,36 @@ module.exports = {
     async execute(interaction) {
         // Get mod name and price
         const modName = interaction.options.getString('mod');
-        const modNameNoSpace = replaceSpaceWithUnderscore(modName);
+        const modNameNoSpace = utils.replaceSpaceWithUnderscore(modName);
         const desiredPrice = interaction.options.getString('desired-price');
+
+        // Get user data
+        const interactionUser = await interaction.guild.members.fetch(interaction.user.id)
+
+        const nickName = interactionUser.nickname
+        const userName = interactionUser.user.username
+        const userId = interactionUser.id
 
         // Get mod data
         const modData = await API.getItemOrdersByName(modNameNoSpace)
-                        .then(data => data)
-                        .catch(error => {
-                            if (error.response.status === 404) {
-                                interaction.reply({ content: 'Mod not found.', ephemeral: true });
-                            } else {
-                                interaction.reply({ content: 'Something went wrong.', ephemeral: true });
-                                console.error(error);
-                            }
+            .then(data => data)
+            .catch(error => {
+                if (error.response.status === 404) {
+                    interaction.reply({ content: 'Mod not found.', ephemeral: true });
+                } else {
+                    interaction.reply({ content: 'Something went wrong.', ephemeral: true });
+                    console.error(error);
+                }
 
-                            return Promise.reject(error);
-                        });
+                return Promise.reject(error);
+            });
 
         // Check thge result of the API call
         if (modData === null) {
             // If the API call failed, return
             return;
         }
-        const lowestPlatinumPrice = getLowestPlatinumPrice(modData);
+        const lowestPlatinumPrice = utils.getLowestPlatinumPrice(modData);
 
         // Date
         const timeElapsed = Date.now();
@@ -138,12 +78,12 @@ module.exports = {
         const id = listData.items.length + 1;
 
         // While ID exists, increment it
-        while (checkIdExist(listData, id)) {
+        while (utils.checkIdExist(listData, id)) {
             id++;
         }
 
 
-        const modNameOutput = makeFirstLettersUpper(modName);
+        const modNameOutput = utils.makeFirstLettersUpper(modName);
         // Format Embed
         const replyEmbed = new EmbedBuilder()
             .setColor('Blue') // Blue
@@ -171,8 +111,11 @@ module.exports = {
             await interaction.reply({ embeds: [replyEmbed] });
 
             // If successful, add mod to list
+            // Change check to start (save time)
+            // If check is by different user allow 
             if (!itemExists) {
-                addModToList(id, modNameNoSpace, desiredPrice, listData, listFilePath);
+                console.log(userName)
+                utils.addModToList(id, modNameNoSpace, desiredPrice, userName, listData, listFilePath);
             }
         } catch (err) {
             console.error(err);

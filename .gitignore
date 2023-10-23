@@ -2,3 +2,4 @@
 testing/market.js
 testing/test.json
 *.json
+node_modules/.bin/mime

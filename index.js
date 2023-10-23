@@ -11,6 +11,9 @@ const TelegramBot = require('node-telegram-bot-api');
 const { telegramToken, mahdiChatID, evgeniiChatID } = require('./config.json');
 const bot = new TelegramBot(telegramToken, { polling: true });
 
+// Warframe Market
+const { compareDataWithAPI } = require('./events/watch-list-event.js');
+
 // Create a new client instance
 const client = new Client({
     intents: [
@@ -39,6 +42,18 @@ client.once('ready', () => {
         status: 'dnd',
     });
     console.log('Bot is ready!');
+
+    // Initiate Events
+    console.log('Initiating events...');
+    try {
+        // @TODO: SetInterval for check
+        compareDataWithAPI(bot);
+        console.log('Market watch initiated.')
+    } catch (error) {
+        console.error(error);
+        console.log('Market watch failed to initiate.')
+    }
+    
 });
 
 // Listen for new messages
@@ -52,9 +67,6 @@ client.on('messageCreate', async message => {
     if (message.author.id == "1163511421783507015") {
         bot.sendMessage(evgeniiChatID, message.content);
     }
-
-    console.log(message.content);
-
 });
 
 // Listen for interactions
