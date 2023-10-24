@@ -3,7 +3,7 @@ const API = require('../wf-market-api.js');
 const fs = require('fs');
 const path = require('path');
 // Import utils.js
-const utils = require('../utilities/utils.js');
+const { replaceSpaceWithUnderscore, getLowestPlatinumPrice, checkJsonFileExist, createJsonFile, readJsonFile, createUserInJson, checkItemIdExist, makeFirstLettersUpper, addItemToJson, updateJsonFile } = require('../utilities/utils.js');
 // logger.js
 const { log } = require('../utilities/logger.js');
 
@@ -21,71 +21,64 @@ module.exports = {
     async execute(interaction) {
         // Get mod name and price
         const modName = interaction.options.getString('mod');
-        const modNameNoSpace = utils.replaceSpaceWithUnderscore(modName);
+        const modNameNoSpace = replaceSpaceWithUnderscore(modName);
         const desiredPrice = interaction.options.getString('desired-price');
+        const desiredPriceToNumber = parseInt(desiredPrice);
 
         // Get user data
-        const interactionUser = await interaction.guild.members.fetch(interaction.user.id)
-
-        const nickName = interactionUser.nickname
-        const userName = interactionUser.user.username
-        const userId = interactionUser.id
+        const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
+        const username = interactionUser.user.username;
+        const userId = interactionUser.id;
 
         // Get mod data
-        const modData = await API.getItemOrdersByName(modNameNoSpace)
-            .then(data => data)
-            .catch(error => {
-                if (error.response.status === 404) {
-                    interaction.reply({ content: 'Mod not found.', ephemeral: true });
-                } else {
-                    interaction.reply({ content: 'Something went wrong.', ephemeral: true });
-                    log(console.error(error));
-                }
+        const modData = await API.getItemOrdersByName(modNameNoSpace).then(data => data);
 
-                return Promise.reject(error);
-            });
-
-        // Check thge result of the API call
-        if (modData === null || modData === undefined || !modData.payload || !modData.payload.orders) {
+        // Check modData
+        if (modData === 404) {
+            interaction.reply({ content: 'Mod not found.', ephemeral: true });
+            return;
+        } else if (modData === -1) {
+            interaction.reply({ content: 'Evgenii broke me as usual. <3', ephemeral: true });
+        }
+        
+        // Check the result of the API call
+        if (!modData || !modData.payload || !modData.payload.orders) {
             // If the API call failed, return
             return;
         }
-        const lowestPlatinumPrice = utils.getLowestPlatinumPrice(modData);
+        const lowestPlatinumPrice = getLowestPlatinumPrice(modData);
 
         // Date
         const timeElapsed = Date.now();
         const today = new Date(timeElapsed);
 
         // JSON
-        const dataDirectory = path.join(__dirname, '../data');
-        const listFilePath = path.join(dataDirectory, 'list.json');
-
-        // Check if watch-list.json exists, if not create it
-        if (!fs.existsSync(dataDirectory)) {
-            fs.mkdirSync(dataDirectory);
-        }
-        if (!fs.existsSync(listFilePath)) {
-            const initialData = {
-                items: [],
-            };
-            fs.writeFileSync(listFilePath, JSON.stringify(initialData, null, 2)); // 2 spaces for indentation
-        }
+        // Check if JSON file exists, if not, create it
+        createJsonFile();
 
         // Read the contents of list.json
-        const listData = JSON.parse(fs.readFileSync(listFilePath, 'utf8'));
-        // Check mod exists within the items array
-        const itemToCheck = modNameNoSpace;
-        const itemExists = listData.items.some((item) => item.item_name === itemToCheck);
-        // ID stuff
-        const id = listData.items.length + 1;
+        const listData = readJsonFile();
 
-        // While ID exists, increment it
-        while (utils.checkItemIdExist(listData, id)) {
+        // Check if the user exists in the JSON file, if not, create it
+        if (!listData.hasOwnProperty(userId)) {
+            createUserInJson(userId, username, listData);
+        }
+
+        // Check if the item exists within the specific user's items
+        const userItems = listData[userId].items;
+        const itemToCheck = modNameNoSpace;
+        const itemExists = userItems.some((item) => item.item_name === itemToCheck);
+
+        // ID stuff
+        let id = 1; // Start with an initial ID
+
+        // While ID exists for the specific user, increment it
+        while (checkItemIdExist(listData[userId], id)) {
             id++;
         }
 
+        const modNameOutput = makeFirstLettersUpper(modName);
 
-        const modNameOutput = utils.makeFirstLettersUpper(modName);
         // Format Embed
         const replyEmbed = new EmbedBuilder()
             .setColor('Blue') // Blue
@@ -112,13 +105,14 @@ module.exports = {
         try {
             await interaction.reply({ embeds: [replyEmbed] });
 
-            // If successful, add mod to list
+            // If successful, add mod to the list
             // Change check to start (save time)
-            // If check is by different user allow 
+            // If check is by a different user, allow
             if (!itemExists) {
                 // Log user and mod to console
-                log('User: ' + userName + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPrice);
-                utils.addItemToList(id, modNameNoSpace, desiredPrice, userName, listData, listFilePath);
+                log('User: ' + username + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPriceToNumber);
+                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData);
+                updateJsonFile(listData);
             }
         } catch (err) {
             console.error(err);

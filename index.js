@@ -13,6 +13,7 @@ const bot = new TelegramBot(telegramToken, { polling: true });
 
 // Utils
 const { log } = require('./utilities/logger.js');
+const { readJsonFile } = require('./utilities/utils.js');
 
 // Create a new client instance
 const client = new Client({
@@ -86,8 +87,10 @@ for (const file of eventFiles) {
     if (event.name === 'watch-market') {
         // Scheudle event to run every 10 minutes
         setInterval(() => {
-            event.execute(bot);
-        }, 60 * 10 * 1000);
+            const jsonData = readJsonFile();
+            // Read JSON file
+            event.execute(bot, jsonData);
+        }, 10 * 1000);
     } else {
         if (event.once) {
             client.once(event.name, (...args) => event.execute(...args));

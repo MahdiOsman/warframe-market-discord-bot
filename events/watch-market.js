@@ -6,62 +6,69 @@ const API = require('../wf-market-api.js');
 // Config
 const { mahdiChatID, evgeniiChatID } = require('../config.json');
 // Utils
-const { getLowestPlatinumPrice, removeItemFromList, removeUnderscore, makeFirstLettersUpper } = require('../utilities/utils.js');
+const { getLowestPlatinumPrice, removeItemFromJson, removeUnderscore, makeFirstLettersUpper, checkJsonFileExist, updateJsonFile } = require('../utilities/utils.js');
 const { log } = require('../utilities/logger.js');
 
-// JSON file
-const dataDirectory = path.join(__dirname, '../data');
-const listFilePath = path.join(dataDirectory, 'list.json');
-
 // Function to compare the list.json data with the API prices
-async function compareDataWithAPI(bot) {
-    if (!fs.existsSync(listFilePath)) {
+async function compareDataWithAPI(bot, jsonData) {
+    if (!checkJsonFileExist()) {
         log('File does not exist');
         return;
     }
 
-    // log initial message
+    // Log initial message
     log('Comparing data with API...');
 
-    // Read the contents of list.json
-    const listData = JSON.parse(fs.readFileSync(listFilePath, 'utf8'));
+    // Loop through each user in the JSON data
+    for (const user in jsonData) {
+        const username = jsonData[user].username;
+        const userItems = jsonData[user].items;
 
-    // Loop through the items in list.json
-    for (const item of listData.items) {
-        const apiData = await API.getItemOrdersByName(item.item_name);
+        for (let i = 0; i < userItems.length; i++) {
+            const item = userItems[i];
+            const apiData = await API.getItemOrdersByName(item.item_name);
 
-        // Check if the API call was successful
-        if (apiData) {
-            const lowestPrice = getLowestPlatinumPrice(apiData);
+            // Check if the API call was successful
+            if (apiData) {
+                const lowestPrice = getLowestPlatinumPrice(apiData);
 
-            // Compare the prices and take action if needed
-            if (lowestPrice !== null && lowestPrice < item.item_price) {
-                log("Price of " + item.item_name + " has dropped to " + lowestPrice + "p.");
+                // Update the item's price in the user's list
+                item.current_market_price = lowestPrice;
 
-                if (item.created_by_user == "theillusions") {
-                    // Remove item from list
-                    removeItemFromList(item.id, listData, listFilePath);
-                    // Send telegram message
-                    bot.sendMessage(mahdiChatID, 'Price of ' + item.item_name + ' has dropped to ' + lowestPrice + 'p.');
-                }
-                if (item.created_by_user == "") {
-                    // Remove item from list
-                    removeItemFromList(item.id, listData, listFilePath);
-                    // Send telegram message
-                    bot.sendMessage(evgeniiChatID, 'Price of ' + makeFirstLettersUpper(removeUnderscore(item.item_name)) + ' has dropped to ' + lowestPrice + 'p.');
+                // Compare the prices and take action if needed
+                if (lowestPrice !== null && lowestPrice <= item.item_price) {
+                    log("Price of " + item.item_name + " has dropped to " + lowestPrice + "p.");
+
+                    // Remove the item from the user's list
+                    removeItemFromJson(item.id, user, jsonData);
+
+                    // Send telegram message to the user
+                    if (username === "theillusions") {
+                        log('Sending message to ' + username + '...');
+                        bot.sendMessage(mahdiChatID, 'Price of ' + makeFirstLettersUpper(removeUnderscore(item.item_name)) + ' has dropped to ' + lowestPrice + 'p.');
+                        log('Message sent.');
+                    } else if (username === "theasuna") {
+                        log('Sending message to ' + username + '...');
+                        bot.sendMessage(evgeniiChatID, 'Price of ' + makeFirstLettersUpper(removeUnderscore(item.item_name)) + ' has dropped to ' + lowestPrice + 'p.');
+                        log('Message sent.');
+                    }
                 }
             }
         }
     }
 
-    fs.writeFileSync(listFilePath, JSON.stringify(listData, null, 2)); // 2 spaces for indentation
+    // Write the updated JSON data back to the file
+    updateJsonFile(jsonData);
 
+    // Log completion message
     log('Comparison completed.');
 }
 
-module.exports = { 
+
+
+module.exports = {
     name: 'watch-market',
-    execute(bot) {
-        compareDataWithAPI(bot);
+    execute(bot, jsonData) {
+        compareDataWithAPI(bot, jsonData);
     }
 };
