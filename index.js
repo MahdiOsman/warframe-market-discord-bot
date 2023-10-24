@@ -11,8 +11,8 @@ const TelegramBot = require('node-telegram-bot-api');
 const { telegramToken, mahdiChatID, evgeniiChatID } = require('./config.json');
 const bot = new TelegramBot(telegramToken, { polling: true });
 
-// Warframe Market
-const { compareDataWithAPI } = require('./events/watch-list-event.js');
+// Utils
+const { log } = require('./utilities/logger.js');
 
 // Create a new client instance
 const client = new Client({
@@ -41,19 +41,8 @@ client.once('ready', () => {
         activities: [{ name: 'you make some plat.', type: ActivityType.Watching }],
         status: 'dnd',
     });
-    console.log('Bot is ready!');
+    log('Bot is ready!');
 
-    // Initiate Events
-    console.log('Initiating events...');
-    try {
-        // @TODO: SetInterval for check
-        compareDataWithAPI(bot);
-        console.log('Market watch initiated.')
-    } catch (error) {
-        console.error(error);
-        console.log('Market watch failed to initiate.')
-    }
-    
 });
 
 // Listen for new messages
@@ -75,15 +64,38 @@ client.on('interactionCreate', async interaction => {
 
     const command = interaction.client.commands.get(interaction.commandName);
 
-	if (!command) return;
+    if (!command) return;
 
-	try {
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
-		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-	}
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        log(error);
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
 });
 
-// Login to Discord with your client's token
-client.login(discordToken);
+// EVENTS
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+
+    if (event.name === 'watch-market') {
+        // Scheudle event to run every 10 minutes
+        setInterval(() => {
+            event.execute(bot);
+        }, 60 * 10 * 1000);
+    } else {
+        if (event.once) {
+            client.once(event.name, (...args) => event.execute(...args));
+        } else {
+            client.on(event.name, (...args) => event.execute(...args));
+        }
+    }
+}
+
+    // Login to Discord with your client's token
+    client.login(discordToken);

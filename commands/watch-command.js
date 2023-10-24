@@ -3,7 +3,9 @@ const API = require('../wf-market-api.js');
 const fs = require('fs');
 const path = require('path');
 // Import utils.js
-const utils = require('../utils.js');
+const utils = require('../utilities/utils.js');
+// logger.js
+const { log } = require('../utilities/logger.js');
 
 // Slash Command
 module.exports = {
@@ -37,14 +39,14 @@ module.exports = {
                     interaction.reply({ content: 'Mod not found.', ephemeral: true });
                 } else {
                     interaction.reply({ content: 'Something went wrong.', ephemeral: true });
-                    console.error(error);
+                    log(console.error(error));
                 }
 
                 return Promise.reject(error);
             });
 
         // Check thge result of the API call
-        if (modData === null) {
+        if (modData === null || modData === undefined || !modData.payload || !modData.payload.orders) {
             // If the API call failed, return
             return;
         }
@@ -78,7 +80,7 @@ module.exports = {
         const id = listData.items.length + 1;
 
         // While ID exists, increment it
-        while (utils.checkIdExist(listData, id)) {
+        while (utils.checkItemIdExist(listData, id)) {
             id++;
         }
 
@@ -114,8 +116,9 @@ module.exports = {
             // Change check to start (save time)
             // If check is by different user allow 
             if (!itemExists) {
-                console.log(userName)
-                utils.addModToList(id, modNameNoSpace, desiredPrice, userName, listData, listFilePath);
+                // Log user and mod to console
+                log('User: ' + userName + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPrice);
+                utils.addItemToList(id, modNameNoSpace, desiredPrice, userName, listData, listFilePath);
             }
         } catch (err) {
             console.error(err);

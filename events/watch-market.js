@@ -6,20 +6,22 @@ const API = require('../wf-market-api.js');
 // Config
 const { mahdiChatID, evgeniiChatID } = require('../config.json');
 // Utils
-const { getLowestPlatinumPrice } = require('../utils.js');
+const { getLowestPlatinumPrice, removeItemFromList, removeUnderscore, makeFirstLettersUpper } = require('../utilities/utils.js');
+const { log } = require('../utilities/logger.js');
 
 // JSON file
 const dataDirectory = path.join(__dirname, '../data');
 const listFilePath = path.join(dataDirectory, 'list.json');
 
-// @TODO: Check if price dropped -> Send message
-//        If message sent -> Don't resend message
 // Function to compare the list.json data with the API prices
 async function compareDataWithAPI(bot) {
     if (!fs.existsSync(listFilePath)) {
-        console.log('File does not exist');
+        log('File does not exist');
         return;
     }
+
+    // log initial message
+    log('Comparing data with API...');
 
     // Read the contents of list.json
     const listData = JSON.parse(fs.readFileSync(listFilePath, 'utf8'));
@@ -34,17 +36,19 @@ async function compareDataWithAPI(bot) {
 
             // Compare the prices and take action if needed
             if (lowestPrice !== null && lowestPrice < item.item_price) {
-                console.log("Price of " + item.item_name + " has dropped to " + lowestPrice + "p.");
+                log("Price of " + item.item_name + " has dropped to " + lowestPrice + "p.");
 
                 if (item.created_by_user == "theillusions") {
-                    item.check_flag = true; // Once checked flag 
+                    // Remove item from list
+                    removeItemFromList(item.id, listData, listFilePath);
                     // Send telegram message
                     bot.sendMessage(mahdiChatID, 'Price of ' + item.item_name + ' has dropped to ' + lowestPrice + 'p.');
                 }
                 if (item.created_by_user == "") {
-                    item.check_flag = true; // Once checked flag
+                    // Remove item from list
+                    removeItemFromList(item.id, listData, listFilePath);
                     // Send telegram message
-                    bot.sendMessage(evgeniiChatID, 'Price of ' + item.item_name + ' has dropped to ' + lowestPrice + 'p.');
+                    bot.sendMessage(evgeniiChatID, 'Price of ' + makeFirstLettersUpper(removeUnderscore(item.item_name)) + ' has dropped to ' + lowestPrice + 'p.');
                 }
             }
         }
@@ -52,7 +56,12 @@ async function compareDataWithAPI(bot) {
 
     fs.writeFileSync(listFilePath, JSON.stringify(listData, null, 2)); // 2 spaces for indentation
 
-    console.log('Comparison completed.');
+    log('Comparison completed.');
 }
 
-module.exports = { compareDataWithAPI };
+module.exports = { 
+    name: 'watch-market',
+    execute(bot) {
+        compareDataWithAPI(bot);
+    }
+};

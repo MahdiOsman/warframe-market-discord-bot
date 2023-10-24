@@ -1,3 +1,4 @@
+const { log } = require('./logger.js');
 const fs = require('fs');
 
 /**
@@ -6,7 +7,7 @@ const fs = require('fs');
  * @param {number} itemIdToCheck - The ID to check for.
  * @returns {boolean} - True if the item with the given ID exists, false otherwise.
  */
-function checkIdExist(jsonData, itemIdToCheck) {
+function checkItemIdExist(jsonData, itemIdToCheck) {
     const itemExists = jsonData.items.some((item) => item.id === itemIdToCheck);
     return itemExists;
 }
@@ -19,13 +20,12 @@ function checkIdExist(jsonData, itemIdToCheck) {
  * @param {Object} jsonData - The JSON data to update.
  * @param {string} listFilePath - The path to the list JSON file.
  */
-function addModToList(modId, modName, modPrice, user, jsonData, listFilePath) {
+function addItemToList(modId, modName, modPrice, user, jsonData, listFilePath) {
     // If mod does not exist, add it
     jsonData.items.push({
         id: modId,
         item_name: modName,
         item_price: modPrice,
-        check_flag: false, // Default
         current_market_price: 0, // Default
         created_by_user: user
     });
@@ -49,8 +49,10 @@ function getLowestPlatinumPrice(jsonData) {
 
     // Loop through the orders to find the lowest platinum price
     for (const order of jsonData.payload.orders) {
-        if (order.platinum < lowestPlatinumPrice) {
-            lowestPlatinumPrice = order.platinum;
+        if (order.order_type === 'sell' && order.user.status == 'ingame') {
+            if (order.platinum < lowestPlatinumPrice) {
+                lowestPlatinumPrice = order.platinum;
+            }
         }
     }
 
@@ -72,14 +74,30 @@ function makeFirstLettersUpper(string) {
     return string.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
 }
 
+// Remove item from list
+function removeItemFromList(item, listData, listFilePath) {
+    log(`Removing ${item} from list...`);
+    // Remove item from list
+    const index = listData.items.indexOf(item);
+    listData.items.splice(index, 1);
+    // Write the updated data back to list.json
+    fs.writeFileSync(listFilePath, JSON.stringify(listData, null, 2)); // 2 spaces for indentation
+}
+
+// Remove underscore from string
+function removeUnderscore(string) {
+    return string.replace(/_/g, ' ');
+}
 
 // Export modules
 module.exports = {
-    checkIdExist,
-    addModToList,
+    checkItemIdExist,
+    addItemToList,
     replaceSpaceWithUnderscore,
     toString,
     replaceSpaceWithUnderscore,
     getLowestPlatinumPrice,
-    makeFirstLettersUpper
+    makeFirstLettersUpper,
+    removeItemFromList,
+    removeUnderscore
 }
