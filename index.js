@@ -51,10 +51,12 @@ client.on('messageCreate', async message => {
     // Send message to telegram bot
     // Mahdi
     if (message.author.id == "1162923617164722256") {
+        log(message.content);
         bot.sendMessage(mahdiChatID, message.content);
     }
     // Evgenii
     if (message.author.id == "1163511421783507015") {
+        log(message.content);
         bot.sendMessage(evgeniiChatID, message.content);
     }
 });
@@ -85,12 +87,12 @@ for (const file of eventFiles) {
     const event = require(filePath);
 
     if (event.name === 'watch-market') {
-        // Scheudle event to run every 10 minutes
+        // Scheudle event to run every x minutes
         setInterval(() => {
             const jsonData = readJsonFile();
             // Read JSON file
             event.execute(bot, jsonData);
-        }, 10 * 1000);
+        }, 5 * 60 * 1000);
     } else {
         if (event.once) {
             client.once(event.name, (...args) => event.execute(...args));
