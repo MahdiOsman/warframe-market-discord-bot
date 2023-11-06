@@ -38,14 +38,15 @@ module.exports = {
         const userId = interactionUser.id;
 
         // Get consistent
-        let consistant = interaction.options.getString('consistant');
+        const consistant = interaction.options.getString('consistant');
+        let consistantBool = false;
         if (consistant == "true") {
-            consistant = true;
+            consistantBool = true;
         } else if (consistant == "false") {
-            consistant = false;
+            consistantBool = false;
         } else {
             log('Consistant is not true or false.');
-            consistant = false;
+            consistantBool = false;
         }
 
         // Get mod data
@@ -129,7 +130,7 @@ module.exports = {
             if (!itemExists) {
                 // Log user and mod to console
                 log('User: ' + username + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPriceToNumber);
-                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData, consistant);
+                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData, consistantBool);
                 updateJsonFile(listData);
             }
         } catch (err) {
