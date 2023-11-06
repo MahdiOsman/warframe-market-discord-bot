@@ -78,7 +78,7 @@ function createUserInJson(userId, username, jsonData) {
 }
 
 // Function to add an item to the user's items
-function addItemToJson(modId, modName, modPrice, userId, username, jsonData, consistant) {
+function addItemToJson(modId, modName, modPrice, userId, username, jsonData, consistent) {
     if (!jsonData) {
         jsonData = {}; // Initialize jsonData if it's undefined
     }
@@ -94,7 +94,7 @@ function addItemToJson(modId, modName, modPrice, userId, username, jsonData, con
         item_name: modName,
         item_price: modPrice,
         current_market_price: 0, // Default
-        consistant: consistant, // Default
+        consistent: consistent, // Default
         order_type: 'sell', // Default
     });
 }
@@ -174,6 +174,11 @@ function makeFirstLettersUpper(string) {
     return string.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
 }
 
+// Replace first letter of every word with lowercase
+function makeFirstLettersLower(string) {
+    return string.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toLowerCase())));
+}
+
 // Remove underscore from string
 function removeUnderscore(string) {
     return string.replace(/_/g, ' ');
@@ -185,6 +190,7 @@ module.exports = {
     addItemToJson,
     replaceSpaceWithUnderscore,
     toString,
+    makeFirstLettersLower,
     replaceSpaceWithUnderscore,
     getLowestPlatinumPrice,
     makeFirstLettersUpper,

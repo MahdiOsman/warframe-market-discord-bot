@@ -3,7 +3,7 @@ const API = require('../wf-market-api.js');
 const fs = require('fs');
 const path = require('path');
 // Import utils.js
-const { replaceSpaceWithUnderscore, getLowestPlatinumPrice, checkJsonFileExist, createJsonFile, readJsonFile, createUserInJson, checkItemIdExist, makeFirstLettersUpper, addItemToJson, updateJsonFile } = require('../utilities/utils.js');
+const { replaceSpaceWithUnderscore, makeFirstLettersLower, getLowestPlatinumPrice, checkJsonFileExist, createJsonFile, readJsonFile, createUserInJson, checkItemIdExist, makeFirstLettersUpper, addItemToJson, updateJsonFile } = require('../utilities/utils.js');
 // logger.js
 const { log } = require('../utilities/logger.js');
 
@@ -18,7 +18,7 @@ module.exports = {
         .addStringOption(option => option.setName('desired-price')
             .setDescription('The price to watch.')
             .setRequired(true))
-        .addStringOption(option => option.setName('consistant')
+        .addStringOption(option => option.setName('consistent')
             .setDescription('Do not delete once price changes.')
             .setRequired(true)
             .addChoices(
@@ -28,7 +28,7 @@ module.exports = {
     async execute(interaction) {
         // Get mod name and price
         const modName = interaction.options.getString('mod');
-        const modNameNoSpace = replaceSpaceWithUnderscore(modName);
+        const modNameNoSpace = makeFirstLettersLower(replaceSpaceWithUnderscore(modName));
         const desiredPrice = interaction.options.getString('desired-price');
         const desiredPriceToNumber = parseInt(desiredPrice);
 
@@ -38,15 +38,15 @@ module.exports = {
         const userId = interactionUser.id;
 
         // Get consistent
-        const consistant = interaction.options.getString('consistant');
-        let consistantBool = false;
-        if (consistant == "true") {
-            consistantBool = true;
-        } else if (consistant == "false") {
-            consistantBool = false;
+        const consistent = interaction.options.getString('consistent');
+        let consistentBool = false;
+        if (consistent == "true") {
+            consistentBool = true;
+        } else if (consistent == "false") {
+            consistentBool = false;
         } else {
-            log('Consistant is not true or false.');
-            consistantBool = false;
+            log('Consistent is not true or false.');
+            consistentBool = false;
         }
 
         // Get mod data
@@ -96,6 +96,7 @@ module.exports = {
             id++;
         }
 
+        // Output formatting
         const modNameOutput = makeFirstLettersUpper(modName);
 
         // Format Embed
@@ -130,7 +131,7 @@ module.exports = {
             if (!itemExists) {
                 // Log user and mod to console
                 log('User: ' + username + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPriceToNumber);
-                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData, consistantBool);
+                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData, consistentBool);
                 updateJsonFile(listData);
             }
         } catch (err) {

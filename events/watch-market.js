@@ -39,8 +39,8 @@ async function compareDataWithAPI(bot, jsonData) {
                 if (lowestPrice !== null && lowestPrice <= item.item_price) {
                     log("Price of " + item.item_name + " has dropped to " + lowestPrice + "p.");
 
-                    // Remove the item from the user's list if consistant is false
-                    if (!item.consistant)
+                    // Remove the item from the user's list if consistent is false
+                    if (!item.consistent)
                         removeItemFromJson(item.id, user, jsonData);
 
                     // Send telegram message to the user
