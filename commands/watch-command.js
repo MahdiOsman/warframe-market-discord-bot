@@ -17,7 +17,14 @@ module.exports = {
             .setRequired(true))
         .addStringOption(option => option.setName('desired-price')
             .setDescription('The price to watch.')
-            .setRequired(true)),
+            .setRequired(true))
+        .addStringOption(option => option.setName('consistant')
+            .setDescription('Do not delete once price changes.')
+            .setRequired(true)
+            .addChoices(
+            {name: 'True', value: 'true'},
+            {name: 'False', value: 'false'},
+        )),
     async execute(interaction) {
         // Get mod name and price
         const modName = interaction.options.getString('mod');
@@ -29,6 +36,17 @@ module.exports = {
         const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
         const username = interactionUser.user.username;
         const userId = interactionUser.id;
+
+        // Get consistent
+        let consistant = interaction.options.getString('consistant');
+        if (consistant == "true") {
+            consistant = true;
+        } else if (consistant == "false") {
+            consistant = false;
+        } else {
+            log('Consistant is not true or false.');
+            consistant = false;
+        }
 
         // Get mod data
         const modData = await API.getItemOrdersByName(modNameNoSpace).then(data => data);
@@ -111,7 +129,7 @@ module.exports = {
             if (!itemExists) {
                 // Log user and mod to console
                 log('User: ' + username + ' | Mod: ' + modNameOutput + ' | Desired Price: ' + desiredPriceToNumber);
-                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData);
+                addItemToJson(id, modNameNoSpace, desiredPriceToNumber, userId, username, listData, consistant);
                 updateJsonFile(listData);
             }
         } catch (err) {

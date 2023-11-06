@@ -1,5 +1,6 @@
-testing/market.js
+testing/
 testing/test.json
 *.json
 node_modules/*
-utilities/logs
+logs/*
+

@@ -78,7 +78,7 @@ function createUserInJson(userId, username, jsonData) {
 }
 
 // Function to add an item to the user's items
-function addItemToJson(modId, modName, modPrice, userId, username, jsonData) {
+function addItemToJson(modId, modName, modPrice, userId, username, jsonData, consistant) {
     if (!jsonData) {
         jsonData = {}; // Initialize jsonData if it's undefined
     }
@@ -94,6 +94,8 @@ function addItemToJson(modId, modName, modPrice, userId, username, jsonData) {
         item_name: modName,
         item_price: modPrice,
         current_market_price: 0, // Default
+        consistant: consistant, // Default
+        order_type: 'sell', // Default
     });
 }
 
